@@ -1,32 +1,37 @@
 using NUnit.Framework;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
-
 using System;
-using System.IO;
 using System.Collections.Generic;
+using System.IO;
 
 namespace instagram_follower_bot
 {
-    class Instagram
+    internal class Instagram
     {
-        private IWebDriver driver;
-        private readonly String pathChromeProfile = @"C:\Users\Alan\AppData\Local\Google\Chrome\User Data";
-        private readonly String pathChromeDriver = @"C:\Users\Alan\Documents\instagram-follower-bot\infra\";
-
-        private readonly String pathFollowList = @"C:\Users\Alan\Documents\instagram-follower-bot\lists\follow.txt";
-        private readonly String pathFollowingList = @"C:\Users\Alan\Documents\instagram-follower-bot\lists\following.txt";
-        private readonly String pathRequestedList = @"C:\Users\Alan\Documents\instagram-follower-bot\lists\requested.txt";
-        private readonly String pathhFailedList = @"C:\Users\Alan\Documents\instagram-follower-bot\lists\failed.txt";
-
-        private readonly String baseUrl = "https://www.instagram.com/";
-        private readonly String login = "";
-        private readonly String password = "";
+        private readonly string baseUrl = "https://www.instagram.com/";
         private readonly int followLimit = 20;
+        private readonly string login = "";
+        private readonly string password = "";
+        private readonly string pathChromeDriver = @"C:\Users\Alan\Documents\instagram-follower-bot\infra\";
+        private readonly string pathChromeProfile = @"C:\Users\Alan\AppData\Local\Google\Chrome\User Data";
+        private readonly string pathFollowingList = @"C:\Users\Alan\Documents\instagram-follower-bot\lists\following.txt";
+        private readonly string pathFollowList = @"C:\Users\Alan\Documents\instagram-follower-bot\lists\follow.txt";
+        private readonly string pathhFailedList = @"C:\Users\Alan\Documents\instagram-follower-bot\lists\failed.txt";
+        private readonly string pathRequestedList = @"C:\Users\Alan\Documents\instagram-follower-bot\lists\requested.txt";
+        private IWebDriver driver;
 
-        public void LoadTimeout()
+        [TearDown]
+        public void CloseChrome()
         {
-            System.Threading.Thread.Sleep(3000);
+            driver.Quit();
+        }
+
+        [Test]
+        public void OpenInstagram()
+        {
+            // Login();
+            Follow();
         }
 
         [SetUp]
@@ -37,31 +42,7 @@ namespace instagram_follower_bot
 
             driver = new ChromeDriver(pathChromeDriver, chromeOptions);
             driver.Manage().Window.Maximize();
-        }
-
-        [Test]
-        public void OpenInstagram()
-        {
-            // Login();
-            Follow();
-        }
-
-        private void Login()
-        {
-            driver.Url = Path.Combine(baseUrl, "accounts/login");
-
-            LoadTimeout();
-
-            IWebElement usernameInput = driver.FindElement(By.XPath(".//input[@name='username']"));
-            usernameInput.SendKeys(login);
-
-            IWebElement passwordInput = driver.FindElement(By.XPath(".//input[@name='password']"));
-            passwordInput.SendKeys(password);
-
-            IWebElement loginButton = driver.FindElement(By.XPath(".//div[text()='Entrar']"));
-            loginButton.Click();
-
-            LoadTimeout();
+            driver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(5);
         }
 
         private void Follow()
@@ -94,42 +75,13 @@ namespace instagram_follower_bot
             SaveLog(followList, followingList, requestedList, failedList);
         }
 
-        private string OpenProfile(string username)
-        {
-            driver.Url = Path.Combine(baseUrl, username);
-
-            LoadTimeout();
-
-            string status = "failed";
-
-            try
-            {
-                IWebElement followButton = driver.FindElement(By.XPath(".//button[text()='follow']"));
-
-                if (followButton.Displayed)
-                {
-                    followButton.Click();
-
-                    LoadTimeout();
-
-                    status = Following();
-                }
-            }
-            catch
-            {
-                status = Following();
-            }
-
-            return status;
-        }
-
         private string Following()
         {
             string status = "failed";
 
             try
             {
-                IWebElement sendmessageButton = driver.FindElement(By.XPath(".//div[text()='Enviar mensagem']"));
+                IWebElement sendmessageButton = driver.FindElement(By.XPath(".//div[text()='Message']"));
 
                 if (sendmessageButton.Displayed)
                 {
@@ -140,7 +92,7 @@ namespace instagram_follower_bot
             {
                 try
                 {
-                    IWebElement requestedButton = driver.FindElement(By.XPath(".//button[text()='Solicitado']"));
+                    IWebElement requestedButton = driver.FindElement(By.XPath(".//button[text()='Requested']"));
 
                     if (requestedButton.Displayed)
                     {
@@ -151,6 +103,45 @@ namespace instagram_follower_bot
                 {
                     status = "failed";
                 }
+            }
+
+            return status;
+        }
+
+        private void Login()
+        {
+            driver.Url = Path.Combine(baseUrl, "accounts/login");
+
+            IWebElement usernameInput = driver.FindElement(By.XPath(".//input[@name='username']"));
+            usernameInput.SendKeys(login);
+
+            IWebElement passwordInput = driver.FindElement(By.XPath(".//input[@name='password']"));
+            passwordInput.SendKeys(password);
+
+            IWebElement loginButton = driver.FindElement(By.XPath(".//div[text()='Entrar']"));
+            loginButton.Click();
+        }
+
+        private string OpenProfile(string username)
+        {
+            driver.Url = Path.Combine(baseUrl, username);
+
+            string status = "failed";
+
+            try
+            {
+                IWebElement followButton = driver.FindElement(By.XPath(".//button[text()='Follow']"));
+
+                if (followButton.Displayed)
+                {
+                    followButton.Click();
+
+                    status = Following();
+                }
+            }
+            catch
+            {
+                status = Following();
             }
 
             return status;
@@ -168,12 +159,6 @@ namespace instagram_follower_bot
             File.AppendAllLines(pathFollowingList, followingList);
             File.AppendAllLines(pathRequestedList, requestedList);
             File.AppendAllLines(pathhFailedList, failedList);
-        }
-
-        [TearDown]
-        public void CloseChrome()
-        {
-            driver.Quit();
         }
     }
 }
